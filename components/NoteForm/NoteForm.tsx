@@ -1,8 +1,14 @@
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import css from "./NoteForm.module.css";
 import { createNote } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+interface NoteFormValues {
+  title: string;
+  content: string;
+  tag: "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
+}
 
 export interface NoteFormProps {
   onCancel: () => void;
@@ -15,7 +21,7 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
     mutationFn: createNote,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
-      onCancel(); 
+      onCancel();
     },
   });
 
@@ -31,10 +37,16 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
   });
 
   return (
-    <Formik
+    <Formik<NoteFormValues>
       initialValues={{ title: "", content: "", tag: "Todo" }}
       validationSchema={validationSchema}
-      onSubmit={(values) => mutate(values)}
+      onSubmit={(
+        values: NoteFormValues,
+        { setSubmitting }: FormikHelpers<NoteFormValues>
+      ) => {
+        mutate(values);
+        setSubmitting(false);
+      }}
     >
       {({ isSubmitting }) => (
         <Form className={css.form}>
@@ -43,7 +55,7 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
             <Field id="title" name="title" type="text" className={css.input} />
             <div className={css.errorContainer}>
               <ErrorMessage name="title" component="span" className={css.error} />
-              </div>
+            </div>
           </div>
 
           <div className={css.formGroup}>
@@ -55,11 +67,7 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
               rows={8}
               className={css.textarea}
             />
-            <ErrorMessage
-              name="content"
-              component="span"
-              className={css.error}
-            />
+            <ErrorMessage name="content" component="span" className={css.error} />
           </div>
 
           <div className={css.formGroup}>
