@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   dehydrate,
   HydrationBoundary,
@@ -9,6 +10,27 @@ import type { NoteTag } from "@/types/note";
 
 interface NotesPageProps {
   params: Promise<{ slug: string[] }>;
+}
+
+export async function generateMetadata({ params }: NotesPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const tag = slug[0];
+  return {
+    title: `${tag} note `,
+    description: `Browse notes tagged with: ${tag}.`,
+    openGraph: {
+      title: `Note ${tag}`,
+      description: `Browse notes tagged with: ${tag}.`,
+      url: `https://08-zustand-cngjzjsbz-viktors-projects-a36dc51c.vercel.app/notes/filter/${tag}`,
+      images: [
+        {
+          url: "https://ac.goit.global/fullstack/react/notehub-og-meta.jpg",
+          width: 1200,
+          height: 630,
+        },
+      ],
+    },
+  };
 }
 
 export default async function NotesPage({ params }: NotesPageProps) {

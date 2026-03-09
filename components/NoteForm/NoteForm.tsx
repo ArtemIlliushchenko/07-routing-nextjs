@@ -1,14 +1,9 @@
-import { Formik, Form, Field, ErrorMessage, FormikHelpers } from "formik";
-import * as Yup from "yup";
+"use client";
+
 import css from "./NoteForm.module.css";
 import { createNote } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-interface NoteFormValues {
-  title: string;
-  content: string;
-  tag: "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
-}
+import { useNoteStore } from "@/lib/store/noteStore";
 
 export interface NoteFormProps {
   onCancel: () => void;
@@ -16,70 +11,70 @@ export interface NoteFormProps {
 
 export default function NoteForm({ onCancel }: NoteFormProps) {
   const queryClient = useQueryClient();
+  const { draft, setDraft, clearDraft } = useNoteStore();
 
   const { mutate } = useMutation({
     mutationFn: createNote,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
-      onCancel();
+      clearDraft();
+      onCancel(); 
     },
   });
 
-  const validationSchema = Yup.object({
-    title: Yup.string()
-      .min(3, "Title must be at least 3 characters")
-      .max(50, "Title must be at most 50 characters")
-      .required("Title is required"),
-    content: Yup.string().max(500, "Content must be at most 500 characters"),
-    tag: Yup.string()
-      .oneOf(["Todo", "Work", "Personal", "Meeting", "Shopping"], "Invalid tag")
-      .required("Tag is required"),
-  });
+  const handleSubmit = async (formData: FormData) => {
+    const values = {
+      title: formData.get("title") as string,
+      content: formData.get("content") as string,
+      tag: formData.get("tag") as string,
+    };
+    mutate(values);
+  };
 
   return (
-    <Formik<NoteFormValues>
-      initialValues={{ title: "", content: "", tag: "Todo" }}
-      validationSchema={validationSchema}
-      onSubmit={(
-        values: NoteFormValues,
-        { setSubmitting }: FormikHelpers<NoteFormValues>
-      ) => {
-        mutate(values);
-        setSubmitting(false);
-      }}
-    >
-      {({ isSubmitting }) => (
-        <Form className={css.form}>
+        <form className={css.form} action={handleSubmit}>
           <div className={css.formGroup}>
             <label htmlFor="title">Title</label>
-            <Field id="title" name="title" type="text" className={css.input} />
-            <div className={css.errorContainer}>
-              <ErrorMessage name="title" component="span" className={css.error} />
-            </div>
-          </div>
+        <input
+          id="title"
+          name="title"
+          type="text"
+          className={css.input}
+          value={draft.title}
+          onChange={(e) => setDraft({ title: e.target.value })}
+          required
+          minLength={3}
+          maxLength={50}
+        />
+        </div>
 
           <div className={css.formGroup}>
             <label htmlFor="content">Content</label>
-            <Field
+            <textarea
               id="content"
               name="content"
-              as="textarea"
               rows={8}
               className={css.textarea}
-            />
-            <ErrorMessage name="content" component="span" className={css.error} />
-          </div>
+              value={draft.content}
+              onChange={(e) => setDraft({ content: e.target.value })}
+        />
+        </div>
 
           <div className={css.formGroup}>
             <label htmlFor="tag">Tag</label>
-            <Field id="tag" name="tag" as="select" className={css.select}>
+            <select
+              id="tag"
+              name="tag"
+              className={css.select}
+              value={draft.tag}
+              onChange={(e) => setDraft({ tag: e.target.value })}
+            >
               <option value="Todo">Todo</option>
               <option value="Work">Work</option>
               <option value="Personal">Personal</option>
               <option value="Meeting">Meeting</option>
               <option value="Shopping">Shopping</option>
-            </Field>
-            <ErrorMessage name="tag" component="span" className={css.error} />
+            </select>
           </div>
 
           <div className={css.actions}>
@@ -93,13 +88,10 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
             <button
               type="submit"
               className={css.submitButton}
-              disabled={isSubmitting}
             >
               Create note
             </button>
           </div>
-        </Form>
-      )}
-    </Formik>
+        </form>
   );
 }
